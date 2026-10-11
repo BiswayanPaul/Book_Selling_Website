@@ -1,0 +1,137 @@
+// use prisma-8
+
+enum ProductType {
+  PAPERBACK
+  PDF
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Product {
+  id          Int         @id @default(autoincrement())
+  name        String
+  slug        String      @unique
+  description String?
+  type        ProductType
+
+  // Store money in paise, not floating-point rupees.
+  price       Int
+
+  // Relevant for physical products.
+  stock       Int         @default(0)
+
+  // Whether customers can currently purchase this product.
+  isActive    Boolean     @default(true)
+
+  orderItems  OrderItem[]
+
+  createdAt   TimestamptzString @default(now())
+  updatedAt   temporal.updatedAtString()
+}
+
+model Order {
+  id              Int           @id @default(autoincrement())
+
+  // Customer information
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+
+  // Shipping information
+  shippingAddress String?
+  shippingCity    String?
+  shippingState   String?
+  shippingPincode String?
+
+  // Amounts are stored in paise.
+  subtotal        Int
+  discountAmount  Int           @default(0)
+  shippingAmount  Int           @default(0)
+  totalAmount     Int
+
+  status          OrderStatus   @default(PENDING)
+
+  items           OrderItem[]
+  payment         Payment?
+
+  createdAt       TimestamptzString @default(now())
+  updatedAt       temporal.updatedAtString()
+}
+
+model OrderItem {
+  id              Int      @id @default(autoincrement())
+
+  order           Order    @relation(fields: [orderId], references: [id])
+  orderId         Int
+
+  product         Product  @relation(fields: [productId], references: [id])
+  productId       Int
+
+  quantity        Int      @default(1)
+
+  // Snapshot of the price at the time of purchase.
+  // Stored in paise.
+  unitPrice       Int
+
+  createdAt       TimestamptzString @default(now())
+}
+
+model Payment {
+  id                  Int           @id @default(autoincrement())
+
+  order               Order         @relation(fields: [orderId], references: [id])
+  orderId             Int           @unique
+
+  provider            String        @default("RAZORPAY")
+
+  razorpayOrderId     String?       @unique
+  razorpayPaymentId   String?       @unique
+  razorpaySignature   String?
+
+  amount              Int
+  status              PaymentStatus @default(CREATED)
+
+  createdAt           TimestamptzString @default(now())
+  updatedAt           temporal.updatedAtString()
+}
+
+model Discount {
+  id              Int      @id @default(autoincrement())
+
+  code            String   @unique
+  description     String?
+
+  // Percentage discount, e.g. 10 = 10%.
+  percentage      Int?
+
+  // Fixed discount in paise.
+  fixedAmount     Int?
+
+  minimumOrderAmount Int?
+
+  maxUses         Int?
+  usedCount       Int      @default(0)
+
+  isActive        Boolean  @default(true)
+
+  startsAt        TimestamptzString?
+  expiresAt       TimestamptzString?
+
+  createdAt       TimestamptzString @default(now())
+  updatedAt       temporal.updatedAtString()
+}
