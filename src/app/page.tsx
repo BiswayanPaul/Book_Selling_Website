@@ -1,44 +1,35 @@
-const highlights = [
-  {
-    number: "200",
-    title: "TOPICS",
-    description: "from 20 Medical Branches",
-  },
-  {
-    number: "1000+",
-    title: "HIGH-YIELD",
-    description: "Mnemonics & Memory Tips",
-  },
-  {
-    number: "PERFECT FOR",
-    title: "",
-    description: "Various University & Competitive Exams",
-  },
-  {
-    number: "EXAM-FOCUSED",
-    title: "",
-    description: "Quick Revision, Easy Recall, Better Retention",
-  },
-];
+import Link from "next/link";
+import { formatRupees } from "@/lib/money";
+import { getActiveProducts, getHighlights, getSiteContent } from "@/lib/site";
+import { SiteFooter, SiteHeader } from "./site-chrome";
 
-export default function Home() {
+const productStyles = {
+  PAPERBACK: {
+    label: "PAPERBACK",
+    card: "border-slate-200 bg-white",
+    labelText: "text-slate-500",
+    button: "bg-blue-800 hover:bg-blue-900",
+    cta: "Buy Paperback",
+  },
+  PDF: {
+    label: "PDF",
+    card: "border-green-200 bg-green-50",
+    labelText: "text-green-700",
+    button: "bg-green-700 hover:bg-green-800",
+    cta: "Buy PDF",
+  },
+} as const;
+
+export default async function Home() {
+  const [content, highlights, products] = await Promise.all([
+    getSiteContent(),
+    getHighlights(),
+    getActiveProducts(),
+  ]);
+
   return (
     <main className="min-h-screen bg-white text-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <div>
-            <p className="text-sm font-semibold tracking-widest text-green-700">
-              BHARATI BOOK STALL
-            </p>
-            <h1 className="text-lg font-bold text-blue-950">
-              Medical Books & Resources
-            </h1>
-          </div>
-
-          <div className="text-sm text-slate-600">Secure Online Purchase</div>
-        </div>
-      </header>
+      <SiteHeader content={content} />
 
       {/* Hero */}
       <section className="bg-gradient-to-b from-slate-50 to-white">
@@ -47,8 +38,8 @@ export default function Home() {
           <div className="flex justify-center">
             <div className="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-200">
               <img
-                src="/images/book-cover.png"
-                alt="All-in-One Quick Medical Review book cover"
+                src={content.coverImageUrl}
+                alt={`${content.bookTitle} ${content.bookTitleHighlight} book cover`}
                 className="h-auto w-full"
               />
             </div>
@@ -57,19 +48,17 @@ export default function Home() {
           {/* Book information */}
           <div>
             <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-green-700">
-              2025 Edition
+              {content.bookEdition}
             </p>
 
             <h2 className="text-4xl font-extrabold leading-tight text-blue-950 sm:text-5xl">
-              All-in-One Quick
+              {content.bookTitle}
               <br />
-              <span className="text-blue-700">Medical Review</span>
+              <span className="text-blue-700">{content.bookTitleHighlight}</span>
             </h2>
 
             <p className="mt-5 text-lg leading-8 text-slate-600">
-              A quick-revision medical review book designed for nurses, medical
-              and paramedical students, with high-yield topics, mnemonics and
-              exam-focused revision.
+              {content.bookDescription}
             </p>
 
             <div className="mt-6">
@@ -78,123 +67,127 @@ export default function Home() {
               </p>
 
               <p className="mt-2 font-semibold text-slate-800">
-                Dr. Debjit Sarkar · Dr. Subir Dutta · Poli Paul · Mahananda Paul
+                {content.authors}
               </p>
             </div>
 
             {/* Purchase options */}
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-semibold text-slate-500">
-                  PAPERBACK
-                </p>
+            {products.length > 0 ? (
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                {products.map((product) => {
+                  const style = productStyles[product.type];
+                  const outOfStock =
+                    product.type === "PAPERBACK" && product.stock <= 0;
 
-                <p className="mt-2 text-3xl font-extrabold text-blue-950">
-                  ₹199
-                </p>
+                  return (
+                    <div
+                      key={product.id}
+                      className={`rounded-2xl border p-5 shadow-sm ${style.card}`}
+                    >
+                      <p className={`text-sm font-semibold ${style.labelText}`}>
+                        {style.label}
+                      </p>
 
-                <p className="mt-1 text-sm text-slate-500">Physical book</p>
+                      <p className="mt-2 text-3xl font-extrabold text-blue-950">
+                        {formatRupees(product.price)}
+                      </p>
 
-                <button className="mt-5 w-full rounded-xl bg-blue-800 px-5 py-3 font-bold text-white transition hover:bg-blue-900">
-                  Buy Paperback
-                </button>
+                      {product.description && (
+                        <p className="mt-1 text-sm text-slate-500">
+                          {product.description}
+                        </p>
+                      )}
+
+                      {outOfStock ? (
+                        <p className="mt-5 w-full rounded-xl bg-slate-200 px-5 py-3 text-center font-bold text-slate-500">
+                          Out of stock
+                        </p>
+                      ) : (
+                        <Link
+                          href={`/checkout?product=${encodeURIComponent(product.slug)}`}
+                          className={`mt-5 block w-full rounded-xl px-5 py-3 text-center font-bold text-white transition ${style.button}`}
+                        >
+                          {style.cta}
+                        </Link>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-
-              <div className="rounded-2xl border border-green-200 bg-green-50 p-5 shadow-sm">
-                <p className="text-sm font-semibold text-green-700">PDF</p>
-
-                <p className="mt-2 text-3xl font-extrabold text-blue-950">
-                  ₹99
-                </p>
-
-                <p className="mt-1 text-sm text-slate-500">Digital edition</p>
-
-                <button className="mt-5 w-full rounded-xl bg-green-700 px-5 py-3 font-bold text-white transition hover:bg-green-800">
-                  Buy PDF
-                </button>
-              </div>
-            </div>
+            ) : (
+              <p className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-slate-600">
+                This book is not available for purchase right now.
+              </p>
+            )}
           </div>
         </div>
       </section>
 
       {/* Highlights */}
-      <section className="border-y border-slate-200 bg-slate-50">
-        <div className="mx-auto max-w-7xl px-6 py-14">
-          <div className="text-center">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-green-700">
-              Whats inside
-            </p>
+      {highlights.length > 0 && (
+        <section className="border-y border-slate-200 bg-slate-50">
+          <div className="mx-auto max-w-7xl px-6 py-14">
+            <div className="text-center">
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-green-700">
+                {content.highlightsEyebrow}
+              </p>
 
-            <h2 className="mt-2 text-3xl font-extrabold text-blue-950">
-              One Book. Every Topic.
-            </h2>
+              <h2 className="mt-2 text-3xl font-extrabold text-blue-950">
+                {content.highlightsHeading}
+              </h2>
+            </div>
+
+            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {highlights.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+                >
+                  <p className="text-2xl font-extrabold text-green-700">
+                    {item.headline}
+                  </p>
+
+                  {item.title && (
+                    <p className="mt-1 font-bold text-blue-950">{item.title}</p>
+                  )}
+
+                  <p className="mt-2 leading-6 text-slate-600">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {highlights.map((item) => (
-              <div
-                key={item.number}
-                className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
-              >
-                <p className="text-2xl font-extrabold text-green-700">
-                  {item.number}
-                </p>
-
-                {item.title && (
-                  <p className="mt-1 font-bold text-blue-950">{item.title}</p>
-                )}
-
-                <p className="mt-2 leading-6 text-slate-600">
-                  {item.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Audience */}
-      <section className="bg-blue-950 text-white">
-        <div className="mx-auto max-w-7xl px-6 py-14 text-center">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-green-400">
-            Suitable for
-          </p>
+      {content.audienceTags.length > 0 && (
+        <section className="bg-blue-950 text-white">
+          <div className="mx-auto max-w-7xl px-6 py-14 text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-green-400">
+              {content.audienceEyebrow}
+            </p>
 
-          <h2 className="mt-3 text-3xl font-extrabold">
-            Students & Competitive Exams
-          </h2>
+            <h2 className="mt-3 text-3xl font-extrabold">
+              {content.audienceHeading}
+            </h2>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            {[
-              "MBBS",
-              "B.Sc. Nursing",
-              "A.N.M.",
-              "G.N.M.",
-              "Paramedical",
-              "Pharmacist",
-              "AYUSH",
-            ].map((item) => (
-              <span
-                key={item}
-                className="rounded-full border border-blue-800 bg-blue-900 px-5 py-2 text-sm font-semibold"
-              >
-                {item}
-              </span>
-            ))}
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              {content.audienceTags.map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-blue-800 bg-blue-900 px-5 py-2 text-sm font-semibold"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Footer */}
-      <footer className="bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-8 text-center">
-          <p className="font-bold text-blue-950">Bharati Book Stall</p>
-          <p className="mt-1 text-sm text-slate-500">
-            Trusted by Students. Recommended by Educators.
-          </p>
-        </div>
-      </footer>
+      <SiteFooter content={content} />
     </main>
   );
 }
